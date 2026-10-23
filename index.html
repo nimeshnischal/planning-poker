@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planning Poker - Remote Agile Estimation</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Header -->
+    <header class="top-bar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">♠</div>
+        <div>
+          <h1 class="brand-title">Planning Poker</h1>
+          <p class="brand-subtitle">Peer-to-Peer Agile Estimation</p>
+        </div>
+      </div>
+
+      <div id="sessionHeaderControls" class="session-controls hidden">
+        <div class="connection-badge" id="connectionBadge" title="WebRTC connection status">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Connected</span>
+        </div>
+
+        <div class="room-pill">
+          <span class="room-label">Room:</span>
+          <code id="roomCodeDisplay" class="room-code">------</code>
+        </div>
+
+        <button type="button" id="copyInviteBtn" class="btn btn-secondary btn-sm">
+          Copy Invite Link
+        </button>
+
+        <button type="button" id="toggleSpectatorBtn" class="btn btn-ghost btn-sm" title="Switch between voter and spectator mode">
+          Mode: Voter
+        </button>
+
+        <button type="button" id="leaveRoomBtn" class="btn btn-danger-ghost btn-sm">
+          Leave
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Lobby View -->
+      <section id="lobbyView" class="lobby-container">
+        <div class="lobby-card">
+          <div class="lobby-header">
+            <h2>Start or Join a Session</h2>
+            <p>Estimate stories with your team in real time. No account or server cost is required.</p>
+          </div>
+
+          <form id="lobbyForm" class="lobby-form" novalidate>
+            <div class="form-group">
+              <label for="playerNameInput">Your Name</label>
+              <input
+                type="text"
+                id="playerNameInput"
+                name="playerName"
+                placeholder="Enter your display name"
+                maxlength="24"
+                required
+                autocomplete="name"
+              >
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="spectatorCheckbox">
+                <span>Join as spectator (observe without voting)</span>
+              </label>
+            </div>
+
+            <div class="lobby-tabs" role="tablist">
+              <button type="button" id="tabCreateBtn" class="tab-btn active" role="tab" aria-selected="true">
+                Create New Room
+              </button>
+              <button type="button" id="tabJoinBtn" class="tab-btn" role="tab" aria-selected="false">
+                Join Existing Room
+              </button>
+            </div>
+
+            <div id="joinRoomGroup" class="form-group hidden">
+              <label for="roomCodeInput">Room Code</label>
+              <input
+                type="text"
+                id="roomCodeInput"
+                name="roomCode"
+                placeholder="Example: 7K9X2M"
+                maxlength="12"
+                autocomplete="off"
+                spellcheck="false"
+              >
+              <small class="field-hint">Enter the 6-character code from your host, or open an invite link.</small>
+            </div>
+
+            <div id="lobbyError" class="alert-error hidden" role="alert"></div>
+
+            <button type="submit" id="lobbySubmitBtn" class="btn btn-primary btn-lg btn-block">
+              Create Room
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Session View -->
+      <section id="sessionView" class="session-container hidden">
+        <!-- Story / Ticket Bar -->
+        <div class="story-bar">
+          <div class="story-input-wrapper">
+            <label for="storyTitleInput" class="sr-only">Current Story or Ticket</label>
+            <span class="story-prefix">Current Topic:</span>
+            <input
+              type="text"
+              id="storyTitleInput"
+              class="story-input"
+              placeholder="Click to set story title or ticket ID (for example: PROJ-104)"
+              maxlength="120"
+            >
+          </div>
+          <div class="round-counter">
+            <span>Round <strong id="roundNumberDisplay">1</strong></span>
+          </div>
+        </div>
+
+        <!-- Poker Table & Participants Area -->
+        <div class="table-area">
+          <!-- Center Table -->
+          <div class="poker-table">
+            <div class="table-surface">
+              <div id="tableStatusMessage" class="table-status">
+                Pick a card below to cast your vote
+              </div>
+              <div class="table-actions">
+                <button type="button" id="revealBtn" class="btn btn-primary">
+                  Reveal Cards
+                </button>
+                <button type="button" id="resetBtn" class="btn btn-secondary">
+                  New Round
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Participants Grid -->
+          <div id="participantsGrid" class="participants-grid" aria-live="polite"></div>
+        </div>
+
+        <!-- Results Summary Panel (Visible When Revealed) -->
+        <div id="resultsPanel" class="results-panel hidden">
+          <div class="stat-box">
+            <span class="stat-label">Average</span>
+            <span id="statAverage" class="stat-value">-</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Median</span>
+            <span id="statMedian" class="stat-value">-</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Agreement</span>
+            <span id="statAgreement" class="stat-value">-</span>
+          </div>
+          <div class="stat-box stat-distribution-box">
+            <span class="stat-label">Vote Breakdown</span>
+            <div id="statDistribution" class="vote-distribution"></div>
+          </div>
+        </div>
+
+        <!-- Voting Deck -->
+        <div id="deckSection" class="deck-section">
+          <div class="deck-header">
+            <span id="deckPromptText">Select your estimate</span>
+          </div>
+          <div id="cardDeck" class="card-deck" role="group" aria-label="Fibonacci estimation cards"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+  </div>
+</body>
+</html>
