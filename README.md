@@ -4,7 +4,7 @@ This application is a web-based Planning Poker tool for remote Agile teams. It r
 
 ## Live Application
 
-- **URL:** `https://nimeshnischal.github.io/planning-poker/`
+- **URL:** [https://nimeshnischal.github.io/planning-poker/]([url](https://nimeshnischal.github.io/planning-poker/))
 
 ## Features
 
